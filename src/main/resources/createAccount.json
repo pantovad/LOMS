@@ -1,0 +1,17 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "required": [
+    "name",
+    "usd_balance"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "usd_balance": {
+      "type": "number"
+    }
+  }
+}

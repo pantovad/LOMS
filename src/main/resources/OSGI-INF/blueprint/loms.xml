@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd                            http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+    <bean class="com.mongodb.MongoClient" id="mongoBean">
+        <argument index="0" value="localhost"/>
+        <argument index="1" value="27017"/>
+    </bean>
+    <camelContext id="LOMS" streamCache="true" trace="true" xmlns="http://camel.apache.org/schema/blueprint">
+        <properties>
+            <property key="CamelJacksonTypeConverterToPojo" value="true"/>
+        </properties>
+        <onException>
+            <exception>java.lang.Exception</exception>
+            <handled>
+                <constant>true</constant>
+            </handled>
+            <setBody>
+                <simple>{ "status": "failure", "error": "${exception}" }</simple>
+            </setBody>
+        </onException>
+        <restConfiguration component="restlet" port="8080"/>
+        <rest id="rest_loms">
+            <post consumes="application/json" id="post_createAccount" uri="/loms/createAccount">
+                <to uri="direct:createAccount"/>
+            </post>
+            <post consumes="application/json" id="post_fetchAccountDetails" uri="/loms/fetchAccountDetails">
+                <to uri="direct:fetchAccountDetails"/>
+            </post>
+            <post consumes="application/json" id="post_createLimitOrder" uri="/loms/createLimitOrder">
+                <to uri="direct:createLimitOrder"/>
+            </post>
+            <post consumes="application/json" id="post_fetchOrderDetails" uri="/loms/fetchOrderDetails">
+                <to uri="direct:fetchOrderDetails"/>
+            </post>
+        </rest>
+        <route autoStartup="true" id="createAccount">
+            <from id="from_createAccount" uri="direct:createAccount"/>          
+            <to id="validator_createAccount" uri="json-validator:createAccount.json" />
+            <setBody id="setBody_createAccount_in">
+                <simple>{ "_id": "A-${exchangeId}", "account_id": "A-${exchangeId}", "name": "${body[name]}", "usd_balance": ${body[usd_balance]}, "btc_balance": 0.0 }</simple>
+            </setBody>
+            <to id="mongodb_createAccount" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=insert"/>
+            <setBody id="setBody_createAccount_out">
+                <simple>{ "status": "success", "data": ${body} }</simple>
+            </setBody>
+        </route>
+        <route autoStartup="true" id="fetchAccountDetails">
+            <from id="from_fetchAccountDetails" uri="direct:fetchAccountDetails"/>
+            <to id="validator_fetchAccount" uri="json-validator:fetchAccount.json" />
+            <setHeader id="setHeader_fetchAccountDetails_id" headerName="accountId">
+                <simple>${body[account_id]}</simple>
+            </setHeader>
+            <setBody id="setBody_fetchAccountDetails_in">
+                <simple>${body[account_id]}</simple>
+            </setBody>
+            <to id="mongodb_fetchAccountDetails" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=findById"/>
+            <choice id="choice_fetchAccountDetails">
+            	<when id="when_fetchAccountDetails">
+                	<simple>${body} != null</simple>
+                	<setBody id="setBody_fetchAccountDetails_out">
+                		<simple>{ "status": "success", "data": ${body} }</simple>
+            		</setBody>
+            	</when>
+            	<otherwise id="otherwise_fetchAccountDetails">
+                	<setBody id="setBody_fetchAccountDetails_error">
+                		<simple>{ "status": "failure", "error": "Account ID ${header[accountId]} does not exist" }</simple>
+            		</setBody>
+            	</otherwise>
+        	</choice>           
+        </route>
+        <route autoStartup="true" id="createLimitOrder">
+            <from id="from_createLimitOrder" uri="direct:createLimitOrder"/>
+            <to id="validator_createOrder" uri="json-validator:createOrder.json" />
+            <setHeader id="setHeader_createLimitOrder" headerName="mongoInsert">
+                <simple>{ "_id": "O-${exchangeId}", "order_id": "O-${exchangeId}", "account_id": "${body[account_id]}", "price_limit": ${body[price_limit]}, "executed": false }</simple>
+            </setHeader>
+            <to id="check_account_id" uri="direct:fetchAccountDetails" />
+            <choice id="choice_createLimitOrder">
+            	<when id="when_createLimitOrder">
+                	<simple>${body} contains "account_id"</simple>
+                	<setBody id="setBody_createLimitOrder_out">
+                		<simple>${header[mongoInsert]}</simple>
+            		</setBody>
+            		<to id="mongodb_createLimitOrder" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=insert"/>
+            		<setBody id="setBody_createLimitOrder_out">
+                		<simple>{ "status": "success", "data": ${body} }</simple>
+            		</setBody>
+            	</when>
+            </choice>
+        </route>
+    </camelContext>
+</blueprint>

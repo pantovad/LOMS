@@ -1,0 +1,13 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "required": [
+    "order_id"
+  ],
+  "properties": {
+    "order_id": {
+      "type": "string"
+    }
+  }
+}
