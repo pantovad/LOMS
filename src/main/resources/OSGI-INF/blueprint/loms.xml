@@ -9,6 +9,9 @@
         <properties>
             <property key="CamelJacksonTypeConverterToPojo" value="true"/>
         </properties>
+        <dataFormats>
+        	<json id="jackson" prettyPrint="true" library="Jackson"/>
+        </dataFormats>
         <onException>
             <exception>java.lang.Exception</exception>
             <handled>
@@ -18,7 +21,9 @@
                 <simple>{ "status": "failure", "error": "${exception}" }</simple>
             </setBody>
         </onException>
-        <restConfiguration component="restlet" port="8080"/>
+        <restConfiguration component="restlet" port="8080">
+        	<dataFormatProperty key="json.out.prettyPrint" value="true"/>
+        </restConfiguration>
         <rest id="rest_loms">
             <post consumes="application/json" id="post_createAccount" uri="/loms/createAccount">
                 <to uri="direct:createAccount"/>
@@ -36,6 +41,7 @@
         <route autoStartup="true" id="createAccount">
             <from id="from_createAccount" uri="direct:createAccount"/>          
             <to id="validator_createAccount" uri="json-validator:createAccount.json" />
+            <unmarshal id="json_unmarshal_createAccount"><json library="Jackson"/></unmarshal>
             <setBody id="setBody_createAccount_in">
                 <simple>{ "_id": "A-${exchangeId}", "account_id": "A-${exchangeId}", "name": "${body[name]}", "usd_balance": ${body[usd_balance]}, "btc_balance": 0.0 }</simple>
             </setBody>
@@ -47,6 +53,7 @@
         <route autoStartup="true" id="fetchAccountDetails">
             <from id="from_fetchAccountDetails" uri="direct:fetchAccountDetails"/>
             <to id="validator_fetchAccount" uri="json-validator:fetchAccount.json" />
+            <unmarshal id="json_unmarshal_fetchAccountDetails"><json library="Jackson"/></unmarshal>
             <setHeader id="setHeader_fetchAccountDetails_id" headerName="accountId">
                 <simple>${body[account_id]}</simple>
             </setHeader>
@@ -66,11 +73,12 @@
                 		<simple>{ "status": "failure", "error": "Account ID ${header[accountId]} does not exist" }</simple>
             		</setBody>
             	</otherwise>
-        	</choice>           
+        	</choice>
         </route>
         <route autoStartup="true" id="createLimitOrder">
             <from id="from_createLimitOrder" uri="direct:createLimitOrder"/>
             <to id="validator_createOrder" uri="json-validator:createOrder.json" />
+            <unmarshal id="json_unmarshal_createLimitOrder"><json library="Jackson"/></unmarshal>
             <setHeader id="setHeader_createLimitOrder" headerName="mongoInsert">
                 <simple>{ "_id": "O-${exchangeId}", "order_id": "O-${exchangeId}", "account_id": "${body[account_id]}", "price_limit": ${body[price_limit]}, "executed": false }</simple>
             </setHeader>
@@ -87,6 +95,31 @@
             		</setBody>
             	</when>
             </choice>
+        </route>
+        <route autoStartup="true" id="fetchOrderDetails">
+            <from id="from_fetchOrderDetails" uri="direct:fetchOrderDetails"/>
+            <to id="validator_fetchOrder" uri="json-validator:fetchOrder.json" />
+            <unmarshal id="json_unmarshal_fetchOrderDetails"><json library="Jackson"/></unmarshal>
+            <setHeader id="setHeader_fetchOrderDetails_id" headerName="orderId">
+                <simple>${body[order_id]}</simple>
+            </setHeader>
+            <setBody id="setBody_fetchOrderDetails_in">
+                <simple>${body[order_id]}</simple>
+            </setBody>
+            <to id="mongodb_fetchOrderDetails" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=findById"/>
+            <choice id="choice_fetchOrderDetails">
+            	<when id="when_fetchOrderDetails">
+                	<simple>${body} != null</simple>
+                	<setBody id="setBody_fetchOrderDetails_out">
+                		<simple>{ "status": "success", "data": ${body} }</simple>
+            		</setBody>
+            	</when>
+            	<otherwise id="otherwise_fetchOrderDetails">
+                	<setBody id="setBody_fetchOrderDetails_error">
+                		<simple>{ "status": "failure", "error": "Order ID ${header[orderId]} does not exist" }</simple>
+            		</setBody>
+            	</otherwise>
+        	</choice>          
         </route>
     </camelContext>
 </blueprint>
