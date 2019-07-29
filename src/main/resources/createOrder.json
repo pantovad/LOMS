@@ -3,14 +3,14 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "required": [
-    "account_id",
-    "price_limit"
+    "accountId",
+    "priceLimit"
   ],
   "properties": {
-    "account_id": {
+    "accountId": {
       "type": "string"
     },
-    "price_limit": {
+    "priceLimit": {
       "type": "number"
     }
   }

@@ -2,18 +2,18 @@ package com.mycompany;
 
 public class Account {
 
-private String id;
+private String _id;
 private String accountId;
 private String name;
 private Double usdBalance;
-private Double btcBalance;
+private Double btcBalance = (double) 0;
 
-public String getId() {
-return id;
+public String get_id() {
+return _id;
 }
 
-public void setId(String id) {
-this.id = id;
+public void set_id(String _id) {
+this._id = _id;
 }
 
 public String getAccountId() {

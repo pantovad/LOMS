@@ -4,13 +4,13 @@
   "type": "object",
   "required": [
     "name",
-    "usd_balance"
+    "usdBalance"
   ],
   "properties": {
     "name": {
       "type": "string"
     },
-    "usd_balance": {
+    "usdBalance": {
       "type": "number"
     }
   }

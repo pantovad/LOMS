@@ -20,19 +20,20 @@
             <setBody>
                 <simple>{ "status": "failure", "error": "${exception}" }</simple>
             </setBody>
+            <unmarshal><custom ref="jackson"/></unmarshal>
         </onException>
         <restConfiguration bindingMode="json" component="restlet" port="8080">
             <dataFormatProperty key="json.out.prettyPrint" value="true"/>
         </restConfiguration>
         <rest id="rest_loms">
-            <post consumes="application/json" id="post_createAccount" uri="/loms/createAccount" type="Account.class">
+            <post consumes="application/json" id="post_createAccount" uri="/loms/createAccount">
                 <to uri="direct:createAccount"/>
             </post>
             <post consumes="application/json"
                 id="post_fetchAccountDetails" uri="/loms/fetchAccountDetails">
                 <to uri="direct:fetchAccountDetails"/>
             </post>
-            <post consumes="application/json" id="post_createLimitOrder" uri="/loms/createLimitOrder" type="Order.class">
+            <post consumes="application/json" id="post_createLimitOrder" uri="/loms/createLimitOrder">
                 <to uri="direct:createLimitOrder"/>
             </post>
             <post consumes="application/json"
@@ -42,36 +43,35 @@
         </rest>
         <route autoStartup="true" id="createAccount">
             <from id="from_createAccount" uri="direct:createAccount"/>
+            <marshal><custom ref="jackson"/></marshal>
             <to id="validator_createAccount" uri="json-validator:createAccount.json"/>
-            <unmarshal id="json_unmarshal_createAccount">
-                <json library="Jackson"/>
-            </unmarshal>
+            <unmarshal><custom ref="jackson"/></unmarshal>
             <setBody id="setBody_createAccount_in">
-                <simple>{ "_id": "A-${exchangeId}", "account_id": "A-${exchangeId}", "name": "${body[name]}", "usd_balance": ${body[usd_balance]}, "btc_balance": 0.0 }</simple>
+                <simple>{ "_id": "A-${exchangeId}", "account_id": "A-${exchangeId}", "name": "${body[name]}", "usdBalance": ${body[usdBalance]}, "btcBalance": 0.0 }</simple>
             </setBody>
             <to id="mongodb_createAccount" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=insert"/>
             <setBody id="setBody_createAccount_out">
-                <simple>{ "status": "success", "data": ${body} }</simple>
+                <simple>{ "status": "success", "data": ${bodyAs(String)} }</simple>
             </setBody>
+            <unmarshal><custom ref="jackson"/></unmarshal>
         </route>
         <route autoStartup="true" id="fetchAccountDetails">
             <from id="from_fetchAccountDetails" uri="direct:fetchAccountDetails"/>
-            <to id="validator_fetchAccount" uri="json-validator:fetchAccount.json"/>
-            <unmarshal id="json_unmarshal_fetchAccountDetails">
-                <json library="Jackson"/>
-            </unmarshal>
+            <marshal><custom ref="jackson"/></marshal>
+            <to id="validator_fetchAccountDetails" uri="json-validator:fetchAccount.json"/>
+            <unmarshal><custom ref="jackson"/></unmarshal>
             <setHeader headerName="accountId" id="setHeader_fetchAccountDetails_id">
-                <simple>${body[account_id]}</simple>
+                <simple>${body[accountId]}</simple>
             </setHeader>
             <setBody id="setBody_fetchAccountDetails_in">
-                <simple>${body[account_id]}</simple>
+                <simple>${body[accountId]}</simple>
             </setBody>
             <to id="mongodb_fetchAccountDetails" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=findById"/>
             <choice id="choice_fetchAccountDetails">
                 <when id="when_fetchAccountDetails">
                     <simple>${body} != null</simple>
                     <setBody id="setBody_fetchAccountDetails_out">
-                        <simple>{ "status": "success", "data": ${body} }</simple>
+                        <simple>{ "status": "success", "data": ${bodyAs(String)} }</simple>
                     </setBody>
                 </when>
                 <otherwise id="otherwise_fetchAccountDetails">
@@ -80,41 +80,41 @@
                     </setBody>
                 </otherwise>
             </choice>
+            <unmarshal><custom ref="jackson"/></unmarshal>
         </route>
         <route autoStartup="true" id="createLimitOrder">
             <from id="from_createLimitOrder" uri="direct:createLimitOrder"/>
+            <marshal><custom ref="jackson"/></marshal>
             <to id="validator_createOrder" uri="json-validator:createOrder.json"/>
-            <unmarshal id="json_unmarshal_createLimitOrder">
-                <json library="Jackson"/>
-            </unmarshal>
+            <unmarshal><custom ref="jackson"/></unmarshal>
             <setHeader headerName="mongoInsert" id="setHeader_createLimitOrder">
-                <simple>{ "_id": "O-${exchangeId}", "order_id": "O-${exchangeId}", "account_id": "${body[account_id]}", "price_limit": ${body[price_limit]}, "executed": false }</simple>
+                <simple>{ "_id": "O-${exchangeId}", "order_id": "O-${exchangeId}", "accountId": "${body[accountId]}", "priceLimit": ${body[priceLimit]}, "executed": false }</simple>
             </setHeader>
             <to id="check_account_id" uri="direct:fetchAccountDetails"/>
             <choice id="choice_createLimitOrder">
                 <when id="when_createLimitOrder">
-                    <simple>${body} contains "account_id"</simple>
+                    <simple>${body} contains "accountId"</simple>
                     <setBody id="setBody_createLimitOrder_out">
                         <simple>${header[mongoInsert]}</simple>
                     </setBody>
                     <to id="mongodb_createLimitOrder" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=insert"/>
                     <setBody id="setBody_createLimitOrder_out">
-                        <simple>{ "status": "success", "data": ${body} }</simple>
+                        <simple>{ "status": "success", "data": ${bodyAs(String)} }</simple>
                     </setBody>
                 </when>
             </choice>
+            <unmarshal><custom ref="jackson"/></unmarshal>
         </route>
         <route autoStartup="true" id="fetchOrderDetails">
             <from id="from_fetchOrderDetails" uri="direct:fetchOrderDetails"/>
+            <marshal><custom ref="jackson"/></marshal>
             <to id="validator_fetchOrder" uri="json-validator:fetchOrder.json"/>
-            <unmarshal id="json_unmarshal_fetchOrderDetails">
-                <json library="Jackson"/>
-            </unmarshal>
+            <unmarshal><custom ref="jackson"/></unmarshal>
             <setHeader headerName="orderId" id="setHeader_fetchOrderDetails_id">
-                <simple>${body[order_id]}</simple>
+                <simple>${body[orderId]}</simple>
             </setHeader>
             <setBody id="setBody_fetchOrderDetails_in">
-                <simple>${body[order_id]}</simple>
+                <simple>${body[orderId]}</simple>
             </setBody>
             <to id="mongodb_fetchOrderDetails" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=findById"/>
             <choice id="choice_fetchOrderDetails">
@@ -130,6 +130,7 @@
                     </setBody>
                 </otherwise>
             </choice>
+            <unmarshal><custom ref="jackson"/></unmarshal>
         </route>
     </camelContext>
 </blueprint>
