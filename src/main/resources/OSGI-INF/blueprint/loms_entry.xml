@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd                            http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+    <bean class="com.mongodb.MongoClient" id="mongoBean">
+        <argument index="0" value="localhost"/>
+        <argument index="1" value="27017"/>
+    </bean>
+    <bean class="com.mycompany.Account" id="Account"/>
+    <bean class="com.mycompany.Order" id="Order"/>
+    <bean class="com.mycompany.fetchAccount" id="fetchAccount"/>
+    <bean class="com.mycompany.fetchOrder" id="fetchOrder"/>
+    <bean class="com.mycompany.accountProcessor" id="accountProcessor"/>
+    <bean class="com.mycompany.orderProcessor" id="orderProcessor"/>
+    <bean class="com.mycompany.Result" id="Result"/>
+    <bean class="com.mycompany.Error" id="Error"/>
+    <camelContext id="LOMS_ENTRY" streamCache="true" trace="true" xmlns="http://camel.apache.org/schema/blueprint">
+        <properties>
+            <property key="CamelJacksonTypeConverterToPojo" value="true"/>
+        </properties>
+        <onException>
+            <exception>java.lang.Exception</exception>
+            <handled>
+                <constant>true</constant>
+            </handled>
+            <setHeader headerName="errorMessage" id="exception_setHeader">
+                <simple>${exception}</simple>
+            </setHeader>
+            <process id="" ref="Error"/>
+            <removeHeader headerName="errorMessage" id="exception_removeHeader"/>
+        </onException>
+        <restConfiguration bindingMode="json" component="restlet" port="8080">
+            <dataFormatProperty key="json.out.prettyPrint" value="true"/>
+        </restConfiguration>
+        <rest id="rest_loms">
+            <post consumes="application/json" id="post_createAccount"
+                type="com.mycompany.Account" uri="/loms/createAccount">
+                <to uri="direct:createAccount"/>
+            </post>
+            <post consumes="application/json"
+                id="post_fetchAccountDetails"
+                type="com.mycompany.fetchAccount" uri="/loms/fetchAccountDetails">
+                <to uri="direct:fetchAccountDetails"/>
+            </post>
+            <post consumes="application/json" id="post_createLimitOrder"
+                type="com.mycompany.Order" uri="/loms/createLimitOrder">
+                <to uri="direct:createLimitOrder"/>
+            </post>
+            <post consumes="application/json"
+                id="post_fetchOrderDetails"
+                type="com.mycompany.fetchOrder" uri="/loms/fetchOrderDetails">
+                <to uri="direct:fetchOrderDetails"/>
+            </post>
+        </rest>
+        <route autoStartup="true" id="createAccount">
+            <from id="from_createAccount" uri="direct:createAccount"/>
+            <process id="createAccount_process" ref="accountProcessor"/>
+            <to id="mongodb_createAccount" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=insert"/>
+            <process id="createAccount_result_process" ref="Result"/>
+        </route>
+        <route autoStartup="true" id="fetchAccountDetails">
+            <from id="from_fetchAccountDetails" uri="direct:fetchAccountDetails"/>
+            <setHeader headerName="errorMessage" id="setHeader_fetchAccountDetails_error">
+                <simple>Account ID ${body.getAccountId} does not exist</simple>
+            </setHeader>
+            <setBody id="setBody_fetchAccountDetails_in">
+                <simple>${body.getAccountId}</simple>
+            </setBody>
+            <to id="mongodb_fetchAccountDetails" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=findById"/>
+            <choice id="choice_fetchAccountDetails">
+                <when id="when_fetchAccountDetails">
+                    <simple>${body} != null</simple>
+                    <process id="fetchAccountDetails_result_process" ref="Result"/>
+                </when>
+                <otherwise id="otherwise_fetchAccountDetails">
+                    <process id="fetchAccountDetails_error_process" ref="Error"/>
+                </otherwise>
+            </choice>
+            <removeHeader headerName="errorMessage" id="fetchAccountDetails_removeHeader"/>
+        </route>
+        <route autoStartup="true" id="createLimitOrder">
+            <from id="from_createLimitOrder" uri="direct:createLimitOrder"/>
+            <process id="createLimitOrder_process" ref="orderProcessor"/>
+            <setHeader headerName="mongoInsert" id="mongoInsert_setHeader">
+                <simple>${body}</simple>
+            </setHeader>
+            <to id="check_account_id" uri="direct:fetchAccountDetails"/>
+            <choice id="choice_createLimitOrder">
+                <when id="when_createLimitOrder">
+                    <simple>${body[status]} == "success"</simple>
+                    <setBody id="setBody_createLimitOrder_out">
+                        <simple>${header.mongoInsert}</simple>
+                    </setBody>
+                    <to id="mongodb_createLimitOrder" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=insert"/>
+                    <process id="createLimitOrder_result_process" ref="Result"/>
+                </when>
+            </choice>
+        </route>
+        <route autoStartup="true" id="fetchOrderDetails">
+            <from id="from_fetchOrderDetails" uri="direct:fetchOrderDetails"/>
+            <setHeader headerName="errorMessage" id="setHeader_fetchOrderDetails_error">
+                <simple>Account ID ${body.getOrderId} does not exist</simple>
+            </setHeader>
+            <setBody id="setBody_fetchOrderDetails_in">
+                <simple>${body.getOrderId}</simple>
+            </setBody>
+            <to id="mongodb_fetchOrderDetails" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=findById"/>
+            <choice id="choice_fetchOrderDetails">
+                <when id="when_fetchOrderDetails">
+                    <simple>${body} != null</simple>
+                    <process id="fetchOrderDetails_result_process" ref="Result"/>
+                </when>
+                <otherwise id="otherwise_fetchOrderDetails">
+                    <process id="fetchOrderDetails_error_process" ref="Error"/>
+                </otherwise>
+            </choice>
+            <removeHeader headerName="errorMessage" id="fetchOrderDetails_removeHeader"/>
+        </route>
+    </camelContext>
+</blueprint>
