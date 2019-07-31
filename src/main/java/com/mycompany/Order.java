@@ -6,6 +6,7 @@ private String _id;
 private String orderId;
 private String accountId;
 private Double priceLimit;
+private Double amount;
 private Boolean executed = false;
 
 public String get_id() {
@@ -38,6 +39,14 @@ return priceLimit;
 
 public void setPriceLimit(Double priceLimit) {
 this.priceLimit = priceLimit;
+}
+
+public Double getAmount() {
+return amount;
+}
+
+public void setAmount(Double amount) {
+this.amount = amount;
 }
 
 public Boolean getExecuted() {

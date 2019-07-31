@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd                            http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
-    <bean class="com.mongodb.MongoClient" id="mongoBean">
+    <bean class="com.mongodb.MongoClient" id="mongoBeanEntry">
         <argument index="0" value="localhost"/>
         <argument index="1" value="27017"/>
     </bean>
@@ -25,7 +25,7 @@
             <setHeader headerName="errorMessage" id="exception_setHeader">
                 <simple>${exception}</simple>
             </setHeader>
-            <process id="" ref="Error"/>
+            <process id="exception_process" ref="Error"/>
             <removeHeader headerName="errorMessage" id="exception_removeHeader"/>
         </onException>
         <restConfiguration bindingMode="json" component="restlet" port="8080">
@@ -53,8 +53,17 @@
         </rest>
         <route autoStartup="true" id="createAccount">
             <from id="from_createAccount" uri="direct:createAccount"/>
+            <setHeader headerName="accountId" id="accountId_create_setHeader">
+                <simple>A-${exchangeId}</simple>
+            </setHeader>
+            <setHeader headerName="usdBalance" id="usdBalance_create_setHeader">
+                <simple>${body.getUsdBalance}</simple>
+            </setHeader>
+            <setHeader headerName="btcBalance" id="btcBalance_create_setHeader">
+                <simple>0</simple>
+            </setHeader>
             <process id="createAccount_process" ref="accountProcessor"/>
-            <to id="mongodb_createAccount" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=insert"/>
+            <to id="mongodb_createAccount" uri="mongodb:mongoBeanEntry?database=loms&amp;collection=accounts&amp;operation=insert"/>
             <process id="createAccount_result_process" ref="Result"/>
         </route>
         <route autoStartup="true" id="fetchAccountDetails">
@@ -65,7 +74,7 @@
             <setBody id="setBody_fetchAccountDetails_in">
                 <simple>${body.getAccountId}</simple>
             </setBody>
-            <to id="mongodb_fetchAccountDetails" uri="mongodb:mongoBean?database=loms&amp;collection=accounts&amp;operation=findById"/>
+            <to id="mongodb_fetchAccountDetails" uri="mongodb:mongoBeanEntry?database=loms&amp;collection=accounts&amp;operation=findById"/>
             <choice id="choice_fetchAccountDetails">
                 <when id="when_fetchAccountDetails">
                     <simple>${body} != null</simple>
@@ -79,6 +88,12 @@
         </route>
         <route autoStartup="true" id="createLimitOrder">
             <from id="from_createLimitOrder" uri="direct:createLimitOrder"/>
+            <setHeader headerName="orderId" id="orderId_create_setHeader">
+                <simple>O-${exchangeId}</simple>
+            </setHeader>
+            <setHeader headerName="executed" id="executed_create_setHeader">
+                <simple resultType="java.lang.Boolean">false</simple>
+            </setHeader>
             <process id="createLimitOrder_process" ref="orderProcessor"/>
             <setHeader headerName="mongoInsert" id="mongoInsert_setHeader">
                 <simple>${body}</simple>
@@ -87,10 +102,10 @@
             <choice id="choice_createLimitOrder">
                 <when id="when_createLimitOrder">
                     <simple>${body[status]} == "success"</simple>
-                    <setBody id="setBody_createLimitOrder_out">
+                    <setBody id="setBody_createLimitOrder">
                         <simple>${header.mongoInsert}</simple>
                     </setBody>
-                    <to id="mongodb_createLimitOrder" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=insert"/>
+                    <to id="mongodb_createLimitOrder" uri="mongodb:mongoBeanEntry?database=loms&amp;collection=orders&amp;operation=insert"/>
                     <process id="createLimitOrder_result_process" ref="Result"/>
                 </when>
             </choice>
@@ -100,10 +115,10 @@
             <setHeader headerName="errorMessage" id="setHeader_fetchOrderDetails_error">
                 <simple>Account ID ${body.getOrderId} does not exist</simple>
             </setHeader>
-            <setBody id="setBody_fetchOrderDetails_in">
+            <setBody id="setBody_fetchOrderDetails">
                 <simple>${body.getOrderId}</simple>
             </setBody>
-            <to id="mongodb_fetchOrderDetails" uri="mongodb:mongoBean?database=loms&amp;collection=orders&amp;operation=findById"/>
+            <to id="mongodb_fetchOrderDetails" uri="mongodb:mongoBeanEntry?database=loms&amp;collection=orders&amp;operation=findById"/>
             <choice id="choice_fetchOrderDetails">
                 <when id="when_fetchOrderDetails">
                     <simple>${body} != null</simple>
