@@ -10,7 +10,7 @@
     <bean class="com.mycompany.accountProcessor" id="accountProcessorExec"/>
     <bean class="com.mycompany.orderProcessor" id="orderProcessorExec"/>
     <camelContext id="LOMS_EXECUTION" streamCache="true" trace="true" xmlns="http://camel.apache.org/schema/blueprint">
-        <route autoStartup="true" id="price_get">
+        <route autoStartup="false" id="price_get">
             <from id="prices_quartz2" uri="quartz2://prices/trigger?trigger.repeatInterval=1000"/>
             <to id="get_prices" uri="http4://localhost:5000/btc-price"/>
             <unmarshal id="json_unmarshal_prices">
@@ -24,7 +24,7 @@
         <route autoStartup="true" id="price_poll">
             <from id="quartz2" uri="quartz2://loms_ecxecution/trigger?trigger.repeatInterval=5000"/>
             <setHeader headerName="mongoQuery" id="_setHeader1">
-                <simple>{ "timestamp": { "$lt": { "$date": "${date-with-timezone:in.header.fireTime:UTC:yyyy-MM-dd'T'HH:mm:ss}Z" } }}</simple>
+                <simple>{ timestamp: { $lt: { $date: '${date-with-timezone:in.header.fireTime:UTC:yyyy-MM-dd'T'HH:mm:ss.SSS}Z' } }}</simple>
             </setHeader>
             <setBody id="setBody_interval">
                 <simple>${header[mongoQuery]}</simple>
