@@ -13,7 +13,7 @@
     <bean class="com.mycompany.orderProcessor" id="orderProcessor"/>
     <bean class="com.mycompany.Result" id="Result"/>
     <bean class="com.mycompany.Error" id="Error"/>
-    <camelContext id="LOMS_ENTRY" streamCache="true" trace="true" xmlns="http://camel.apache.org/schema/blueprint">
+    <camelContext id="LOMS_ENTRY" streamCache="true" trace="false" xmlns="http://camel.apache.org/schema/blueprint">
         <properties>
             <property key="CamelJacksonTypeConverterToPojo" value="true"/>
         </properties>

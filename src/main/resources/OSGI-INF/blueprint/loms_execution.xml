@@ -9,43 +9,18 @@
     <bean class="com.mycompany.Order" id="OrderExec"/>
     <bean class="com.mycompany.accountProcessor" id="accountProcessorExec"/>
     <bean class="com.mycompany.orderProcessor" id="orderProcessorExec"/>
-    <camelContext id="LOMS_EXECUTION" streamCache="true" trace="true" xmlns="http://camel.apache.org/schema/blueprint">
-        <route autoStartup="false" id="price_get">
+    <camelContext id="LOMS_EXECUTION" streamCache="true" trace="false" xmlns="http://camel.apache.org/schema/blueprint">
+        <route autoStartup="true" id="price_get">
             <from id="prices_quartz2" uri="quartz2://prices/trigger?trigger.repeatInterval=1000"/>
             <to id="get_prices" uri="http4://localhost:5000/btc-price"/>
             <unmarshal id="json_unmarshal_prices">
                 <json library="Jackson"/>
             </unmarshal>
-            <setBody id="prices_setBody">
-                <simple>{ "price": ${body[price]}, "timestamp": {"$date": "${body[timestamp]}Z" } }</simple>
-            </setBody>
-            <to id="mongodb_storePrices" uri="mongodb:mongoBeanExec?database=loms&amp;collection=prices&amp;operation=insert"/>
-        </route>
-        <route autoStartup="true" id="price_poll">
-            <from id="quartz2" uri="quartz2://loms_ecxecution/trigger?trigger.repeatInterval=5000"/>
-            <setHeader headerName="mongoQuery" id="_setHeader1">
-                <simple>{ timestamp: { $lt: { $date: '${date-with-timezone:in.header.fireTime:UTC:yyyy-MM-dd'T'HH:mm:ss.SSS}Z' } }}</simple>
-            </setHeader>
-            <setBody id="setBody_interval">
-                <simple>${header[mongoQuery]}</simple>
-            </setBody>
-            <to id="mongodb_getPrices" uri="mongodb:mongoBeanExec?database=loms&amp;collection=prices&amp;operation=findAll"/>
-            <split id="prices_split">
-                <simple>${body}</simple>
-                <to id="poll_seda" uri="seda:ob_poll"/>
-            </split>
-            <setBody id="setBody_interval">
-                <simple>${header[mongoQuery]}</simple>
-            </setBody>
-            <to id="mongodb_removePrices" uri="mongodb:mongoBeanExec?database=loms&amp;collection=prices&amp;operation=remove"/>
-        </route>
-        <route autoStartup="true" id="ob_poll">
-            <from id="ob_poll_seda" uri="seda:ob_poll"/>
-            <setHeader headerName="price" id="_setHeader2">
+            <setHeader headerName="price" id="price_setHeader">
                 <simple>${body[price]}</simple>
             </setHeader>
             <setBody id="setBody_ob_poll">
-                <simple>{ $or: [ { priceLimit: { $gt: ${header[price]} } }, { executed: { $eq: false } } ] }</simple>
+                <simple>{ $and: [ { priceLimit: { $gt: ${body[price]} } }, { executed: { $eq: false } } ] }</simple>
             </setBody>
             <to id="mongodb_getOrders" uri="mongodb:mongoBeanExec?database=loms&amp;collection=orders&amp;operation=findAll"/>
             <split id="orders_split">
@@ -81,6 +56,7 @@
             </setHeader>
             <process id="account_process" ref="accountProcessorExec"/>
             <to id="mongodb_updateAccount" uri="mongodb:mongoBeanExec?database=loms&amp;collection=accounts&amp;operation=save"/>
+            <log message="Order ${header[orderId]} of account ${header[accountId]} executed using price ${header[price]} for the amount ${header[amount]}"/>
         </route>
     </camelContext>
 </blueprint>
