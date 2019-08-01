@@ -1,6 +1,6 @@
 Test project for LOMS 
 =========================================
-A very small LOMS pilot done using Apache Camel.
+A very simplistic LOMS pilot done using Apache Camel.
 
 Requirements:
 
