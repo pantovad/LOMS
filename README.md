@@ -5,6 +5,7 @@ A very simplistic LOMS pilot done using Apache Camel.
 Requirements:
 
 - JDK8+
+- Maven
 - MongoDB listening on localhost:27017
 - Price generator on http://localhost:5000/btc-price
 
