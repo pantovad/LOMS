@@ -56,7 +56,7 @@
             </setHeader>
             <process id="account_process" ref="accountProcessorExec"/>
             <to id="mongodb_updateAccount" uri="mongodb:mongoBeanExec?database=loms&amp;collection=accounts&amp;operation=save"/>
-            <log message="Order ${header[orderId]} of account ${header[accountId]} executed using price ${header[price]} for the amount ${header[amount]}"/>
+            <log id="order_exec_log" message="Order ${header[orderId]} of account ${header[accountId]} executed using price ${header[price]} for the amount ${header[amount]}"/>
         </route>
     </camelContext>
 </blueprint>
