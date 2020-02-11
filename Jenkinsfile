@@ -1,8 +1,8 @@
 pipeline {
-  agent { any }
+  agent any
   options {
     timestamps()
-    timeout(time: 15, uninyt: 'MINUTES')
+    timeout(time: 15, unit: 'MINUTES')
   }
    
 //  libraries {
@@ -69,7 +69,6 @@ pipeline {
 	    }
   	}
     }
-  }
  
   post {
       always {
@@ -79,3 +78,4 @@ pipeline {
         cleanWs()
       }
   }
+}
