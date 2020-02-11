@@ -24,9 +24,9 @@ pipeline {
       VERSION_URL = "https://d14zqdqr03kypy.cloudfront.net/${params.VERSION}"
       RELEASE_URL = "https://d14zqdqr03kypy.cloudfront.net/release"
   }
-  
+*/  
   stages {
-    stage('Approve') {
+/*    stage('Approve') {
         input {
         	message "Deploying schedulebeta version ${params.VERSION}. Would you like to proceed ?"
         	submitterParameter "APPROVER"
