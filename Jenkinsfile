@@ -9,7 +9,7 @@ pipeline {
 //    lib('jenkins-library')
 //  }
 
-  parameters {
+/*  parameters {
       string(name: 'VERSION', description: 'Specify artefact version')
       booleanParam(
 		name: 'RELEASE',
@@ -37,7 +37,7 @@ pipeline {
   			}
     	}
     }
-
+*/
     stage('Start') {
         steps {
             echo 'Starting deploy ...'
